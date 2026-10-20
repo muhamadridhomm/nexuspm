@@ -1,0 +1,123 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Workspace {
+  id        String     @id @default(uuid())
+  name      String
+  projects  Project[]
+  resources Resource[]
+}
+
+model Project {
+  id          String     @id @default(uuid())
+  name        String
+  workspaceId String
+  workspace   Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  issues      Issue[]
+  cycles      Cycle[]
+  pages       Page[]
+  resources   Resource[]
+  folders     Folder[]
+  documents   Document[]
+}
+
+model Cycle {
+  id        String   @id @default(uuid())
+  name      String
+  startsAt  DateTime
+  endsAt    DateTime
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues    Issue[]
+}
+
+model Issue {
+  id                   String                @id @default(uuid())
+  title                String
+  description          String?
+  status               String                @default("TRIAGE") // TRIAGE, BACKLOG, TODO, IN_PROGRESS, DONE
+  priority             String                @default("NORMAL") // URGENT, HIGH, NORMAL, LOW
+  dueDate              DateTime?
+  points               Int                   @default(0)
+  projectId            String
+  project              Project               @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cycleId              String?
+  cycle                Cycle?                @relation(fields: [cycleId], references: [id], onDelete: SetNull)
+  pageId               String?
+  page                 Page?                 @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  resourceRequirements ResourceRequirement[]
+}
+
+model Page {
+  id        String   @id @default(uuid())
+  title     String
+  content   String   @default("[]") // Structured JSON editor state stored as string
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issues    Issue[]
+}
+
+model Resource {
+  id           String                @id @default(uuid())
+  name         String
+  capacity     Int                   @default(1)
+  workspaceId  String?
+  workspace    Workspace?            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projectId    String?
+  project      Project?              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requirements ResourceRequirement[]
+}
+
+model ResourceRequirement {
+  id         String   @id @default(uuid())
+  quantity   Int      @default(1)
+  issueId    String
+  issue      Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  resourceId String
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+}
+
+model Folder {
+  id        String     @id @default(uuid())
+  name      String
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documents Document[]
+}
+
+model DocumentType {
+  id        String             @id @default(uuid())
+  name      String
+  documents Document[]
+  templates DocumentTemplate[]
+}
+
+model DocumentTemplate {
+  id             String       @id @default(uuid())
+  name           String
+  content        String
+  documentTypeId String
+  documentType   DocumentType @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  documents      Document[]
+}
+
+model Document {
+  id             String            @id @default(uuid())
+  title          String
+  content        String            @default("")
+  projectId      String
+  project        Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  folderId       String?
+  folder         Folder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  documentTypeId String
+  documentType   DocumentType      @relation(fields: [documentTypeId], references: [id], onDelete: Cascade)
+  templateId     String?
+  template       DocumentTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+}
+
